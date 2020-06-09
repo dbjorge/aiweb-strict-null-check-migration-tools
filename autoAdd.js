@@ -6,13 +6,13 @@ const child_process = require('child_process');
 const config = require('./src/config');
 const { forStrictNullCheckEligibleFiles } = require('./src/getStrictNullCheckEligibleFiles');
 
-const vscodeRoot = path.join(process.cwd(), process.argv[2]);
-const srcRoot = path.join(vscodeRoot, 'src');
+const repoRoot = path.join(process.cwd(), process.argv[2]);
+const srcRoot = path.join(repoRoot, 'src');
 
 const buildCompletePattern = /Found (\d+) errors?\. Watching for file changes\./gi;
 
-forStrictNullCheckEligibleFiles(vscodeRoot, () => { }).then(async (files) => {
-    const tsconfigPath = path.join(srcRoot, config.targetTsconfig);
+forStrictNullCheckEligibleFiles(repoRoot, () => { }).then(async (files) => {
+    const tsconfigPath = path.join(repoRoot, config.targetTsconfig);
 
     const child = child_process.spawn('tsc', ['-p', tsconfigPath, '--watch']);
     for (const file of files) {
