@@ -10,14 +10,14 @@ const config = require('./config');
  */
 const forEachFileInSrc = (srcRoot, options) => {
     return new Promise((resolve, reject) => {
-        glob(`${srcRoot}/**/*.ts`, (err, files) => {
+        glob(`${srcRoot}/**/*.@(ts|tsx)`, (err, files) => {
             if (err) {
                 return reject(err);
             }
 
             return resolve(files.filter(file =>
                 !file.endsWith('.d.ts')
-                && (options && options.includeTests ? true : !file.endsWith('.test.ts'))));
+                && (options && options.includeTests ? true : !/\.test\.tsx?$/.test(file))));
         })
     });
 };
