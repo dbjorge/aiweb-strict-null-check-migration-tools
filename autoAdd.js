@@ -12,9 +12,10 @@ const srcRoot = path.join(repoRoot, 'src');
 const buildCompletePattern = /Found (\d+) errors?\. Watching for file changes\./gi;
 
 forStrictNullCheckEligibleFiles(repoRoot, () => { }).then(async (files) => {
+    const tscPath = path.join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
     const tsconfigPath = path.join(repoRoot, config.targetTsconfig);
 
-    const child = child_process.spawn('tsc', ['-p', tsconfigPath, '--watch']);
+    const child = child_process.spawn('node', [tscPath, '-p', tsconfigPath, '--watch']);
     for (const file of files) {
         await tryAutoAddStrictNulls(child, tsconfigPath, file);
     }
@@ -23,35 +24,37 @@ forStrictNullCheckEligibleFiles(repoRoot, () => { }).then(async (files) => {
 
 function tryAutoAddStrictNulls(child, tsconfigPath, file) {
     return new Promise(resolve => {
-        const relativeFilePath = path.relative(srcRoot, file);
+        const relativeFilePath = path.relative(repoRoot, file).replace(/\\/g, '/');
         console.log(`Trying to auto add '${relativeFilePath}'`);
 
-        const originalConifg = JSON.parse(fs.readFileSync(tsconfigPath).toString());
-        originalConifg.files = Array.from(new Set(originalConifg.files.sort()));
+        const originalConfig = JSON.parse(fs.readFileSync(tsconfigPath).toString());
+        originalConfig.files = Array.from(new Set(originalConfig.files.sort()));
 
         // Config on accept
-        const newConfig = Object.assign({}, originalConifg);
-        newConfig.files = Array.from(new Set(originalConifg.files.concat('./' + relativeFilePath).sort()));
-
-        fs.writeFileSync(tsconfigPath, JSON.stringify(newConfig, null, '\t'));
+        const newConfig = Object.assign({}, originalConfig);
+        newConfig.files = Array.from(new Set(originalConfig.files.concat('./' + relativeFilePath).sort()));
 
         const listener = (data) => {
             const textOut = data.toString();
+            // console.log('  ' + textOut);
             const match = buildCompletePattern.exec(textOut);
             if (match) {
                 const errorCount = +match[1];
                 if (errorCount === 0) {
-                    console.log(`👍`);
+                    console.log(`Success`);
                     fs.writeFileSync(tsconfigPath, JSON.stringify(newConfig, null, '\t'));
                 }
                 else {
-                    console.log(`💥 - ${errorCount}`);
-                    fs.writeFileSync(tsconfigPath, JSON.stringify(originalConifg, null, '\t'));
+                    console.log(`Errors (x${errorCount}), skipped`);
+                    fs.writeFileSync(tsconfigPath, JSON.stringify(originalConfig, null, '\t'));
                 }
-                resolve();
+                
                 child.stdout.removeListener('data', listener);
+                resolve();
             }
         };
         child.stdout.on('data', listener);
+
+        fs.writeFileSync(tsconfigPath, JSON.stringify(newConfig, null, '    '));
     });
 }
