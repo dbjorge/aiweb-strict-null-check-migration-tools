@@ -3,6 +3,7 @@ const path = require('path');
 const { getImportsForFile } = require('./tsHelper');
 const glob = require('glob');
 const config = require('./config');
+const util = require('util');
 
 /**
  * @param {string} srcRoot
@@ -32,7 +33,7 @@ module.exports.forStrictNullCheckEligibleFiles = async (repoRoot, forEach, optio
     const srcRoot = path.join(repoRoot, 'src');
 
     const tsconfig = require(path.join(repoRoot, config.targetTsconfig));
-    const checkedFiles = await getCheckedFiles(tsconfig, srcRoot);
+    const checkedFiles = await getCheckedFiles(tsconfig, repoRoot);
 
     const imports = new Map();
     const getMemoizedImportsForFile = (file, srcRoot) => {
@@ -45,6 +46,7 @@ module.exports.forStrictNullCheckEligibleFiles = async (repoRoot, forEach, optio
     }
 
     const files = await forEachFileInSrc(srcRoot, options);
+
     return files
         .filter(file => !checkedFiles.has(file))
         .filter(file => !config.skippedFiles.has(path.relative(srcRoot, file)))
@@ -70,11 +72,11 @@ module.exports.forStrictNullCheckEligibleFiles = async (repoRoot, forEach, optio
         });
 }
 
-async function getCheckedFiles(tsconfig, srcRoot) {
-    const set = new Set(tsconfig.files.map(include => path.join(srcRoot, include)));
-    const includes = tsconfig.include.map(include => {
+async function getCheckedFiles(tsconfigContent, tsconfigDir) {
+    const set = new Set(tsconfigContent.files.map(f => path.join(tsconfigDir, f).replace(/\\/g, '/')));
+    const includes = tsconfigContent.include.map(include => {
         return new Promise((resolve, reject) => {
-            glob(path.join(srcRoot, include), (err, files) => {
+            glob(path.join(tsconfigDir, include), (err, files) => {
                 if (err) {
                     return reject(err);
                 }
