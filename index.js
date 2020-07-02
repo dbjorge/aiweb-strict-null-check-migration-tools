@@ -48,13 +48,16 @@ forStrictNullCheckEligibleFiles(repoRoot, () => { }, { includeTests }).then(asyn
     if (sort) {
         out = out.sort((a, b) => b[1] - a[1]);
     }
+    
     for (const pair of out) {
-        console.log(toFormattedFilePath(pair[0]) + (printDependedOnCount ? ` — Depended on by **${pair[1]}** files` : ''));
+        // console.log(toFormattedFilePath(pair[0]) + (printDependedOnCount ? ` — Depended on by **${pair[1]}** files` : ''));
+        console.log(toFormattedFilePath(pair[0]));
     }
 });
 
 
 function toFormattedFilePath(file) {
     // return `"./${path.relative(srcRoot, file)}",`;
-    return `- [ ] \`"./${path.relative(srcRoot, file)}"\``;
+    const relativePath = path.relative(srcRoot, file).replace(/\\/g, '/');
+    return `"./src/${relativePath}",`;
 }
